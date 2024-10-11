@@ -37,3 +37,6 @@ power_state:
 runcmd:
   - systemctl enable qemu-guest-agent
   - localectl set-locale LANG=en_US.UTF-8
+%{ for cmd in run-cmds  ~}
+  - ${cmd}
+%{ endfor ~}

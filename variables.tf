@@ -17,6 +17,8 @@ variable "images" {
 
         vm_user = string
         vm_ssh_public_key_files = list(string)
+
+        vm_run_cmds = list(string)
     }))
 }
 

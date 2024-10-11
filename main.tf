@@ -21,6 +21,7 @@ resource "proxmox_virtual_environment_file" "cloud-init" {
             hostname      = each.key
             username      = var.images[each.key].vm_user
             pub-keys      = var.images[each.key].vm_ssh_public_key_files
+            run-cmds      = var.images[each.key].vm_run_cmds
         })
 
         file_name = "${each.key}-${var.images[each.key].vm_id}-cloudinit.yaml"
