@@ -13,6 +13,7 @@ hostname: ${hostname}
 package_update: true
 package_upgrade: true
 timezone: Europe/Belgrade
+%{ if packages-enabled ~}
 packages:
   - qemu-guest-agent
   - apt-transport-https
@@ -23,20 +24,42 @@ packages:
   - net-tools
   - jq
   - vim
+%{ if packages-content != null ~}
+%{ for item in packages-content  ~}
+  - ${item}
+%{ endfor ~}
+%{ endif ~}
+%{ endif ~}
+%{ if write-files-enabled ~}
 write_files:
+%{ if write-files-content == null ~}
   - path: /etc/ssh/sshd_config.d/01-harden-ssh.conf
     content: |
       PermitRootLogin no
       PasswordAuthentication no
       ChallengeResponseAuthentication no
+%{ else ~}
+%{ for item in write-files-content  ~}
+  - path: ${item.path}
+    content: |
+      ${ indent(6, item.content) }
+%{ endfor ~}
+%{ endif ~}
+%{ endif ~}
+%{ if reboot-enabled ~}
 power_state:
   delay: now
   mode: reboot
   message: Rebooting after cloud-init completion
   condition: true
+%{ endif ~}
+%{ if run-cmds-enabled ~}
 runcmd:
   - systemctl enable qemu-guest-agent
   - localectl set-locale LANG=en_US.UTF-8
-%{ for cmd in run-cmds  ~}
+%{ if run-cmds-content != null ~}
+%{ for cmd in run-cmds-content  ~}
   - ${cmd}
 %{ endfor ~}
+%{ endif ~}
+%{ endif ~}

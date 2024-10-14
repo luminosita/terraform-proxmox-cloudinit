@@ -17,16 +17,40 @@ resource "proxmox_virtual_environment_file" "cloud-init" {
     datastore_id = "local"
 
     source_raw {
-        data = templatefile("${path.module}/resources/cloud-init/vm-init.yaml.tftpl", {
+        data = var.images[each.key].vm_cloud_init ? templatefile("${path.module}/resources/cloud-init/vm-init.yaml.tftpl", {
             hostname      = each.key
             username      = var.images[each.key].vm_user
             pub-keys      = var.images[each.key].vm_ssh_public_key_files
-            run-cmds      = var.images[each.key].vm_run_cmds
-        })
+            run-cmds-enabled        = var.images[each.key].vm_ci_run_cmds.enabled
+            run-cmds-content        = var.images[each.key].vm_ci_run_cmds.content
+            packages-enabled        = var.images[each.key].vm_ci_packages.enabled
+            packages-content        = var.images[each.key].vm_ci_packages.content
+            write-files-enabled     = var.images[each.key].vm_ci_write_files.enabled
+            write-files-content     = var.images[each.key].vm_ci_write_files.content
+            reboot-enabled          = var.images[each.key].vm_ci_reboot_enabled
+        }) : null
 
         file_name = "${each.key}-${var.images[each.key].vm_id}-cloudinit.yaml"
     }
 }
+
+# Testing template
+# resource "local_file" "test" {
+#     for_each = toset(distinct([for k, v in var.images : k]))
+#     filename = "${each.key}-${var.images[each.key].vm_id}-cloudinit.yaml"
+#     content = var.images[each.key].vm_cloud_init ? templatefile("${path.module}/resources/cloud-init/vm-init.yaml.tftpl", {
+#             hostname      = each.key
+#             username      = var.images[each.key].vm_user
+#             pub-keys      = var.images[each.key].vm_ssh_public_key_files
+#             run-cmds-enabled        = var.images[each.key].vm_ci_run_cmds.enabled
+#             run-cmds-content        = var.images[each.key].vm_ci_run_cmds.content
+#             packages-enabled        = var.images[each.key].vm_ci_packages.enabled
+#             packages-content        = var.images[each.key].vm_ci_packages.content
+#             write-files-enabled     = var.images[each.key].vm_ci_write_files.enabled
+#             write-files-content     = var.images[each.key].vm_ci_write_files.content
+#             reboot-enabled          = var.images[each.key].vm_ci_reboot_enabled
+#         }) : null
+# }
 
 resource "proxmox_virtual_environment_vm" "vm" {
     for_each = toset(distinct([for k, v in var.images : k]))
@@ -99,5 +123,18 @@ resource "proxmox_virtual_environment_vm" "vm" {
         datastore_id      = "local-zfs"
         user_data_file_id = proxmox_virtual_environment_file.cloud-init[each.key].id
     }
+
+#     connection {
+#         type            = "ssh"
+#         user            = var.images[each.key].vm_user
+#         host            = self.ipv4_address
+#         timeout         = "1m"
+#         agent           = false
+#         private_key     = file(var.hcloud.ssh_private_key_file)    
+#     }
+
+#     provisioner "remote-exec" {
+#         inline = [ "while [ ! -f /var/lib/cloud/instance/boot-finished ]; do echo 'Waiting for Cloud-Init...'; sleep 1; done" ]
+#     }
 }
 
