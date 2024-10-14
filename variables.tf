@@ -11,11 +11,12 @@ variable "os" {
 
 variable "images" {
     type        = map(object({
-        vm_id                       = number
+        vm_id               = number
 
-        vm_node_name = string
+        vm_node_name        = string
 
-        vm_cloud_init   = bool
+        vm_cloud_init       = bool
+        vm_cloud_init_data  = optional(string)
 
         vm_ci_packages  = optional(object({
             enabled = optional(bool)

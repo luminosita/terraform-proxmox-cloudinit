@@ -8,6 +8,27 @@ resource "proxmox_virtual_environment_download_file" "os_generic_image" {
     checksum           = var.os.vm_base_image_checksum
     checksum_algorithm = var.os.vm_base_image_checksum_alg
 }
+
+locals {
+    cloud-init-template-data = {
+        for k, v in var.images : k => var.images[k].vm_cloud_init ? templatefile("${path.module}/resources/cloud-init/vm-init.yaml.tftpl", {
+            hostname      = k
+            username      = var.images[k].vm_user
+            pub-keys      = var.images[k].vm_ssh_public_key_files
+            run-cmds-enabled        = var.images[k].vm_ci_run_cmds.enabled
+            run-cmds-content        = var.images[k].vm_ci_run_cmds.content
+            packages-enabled        = var.images[k].vm_ci_packages.enabled
+            packages-content        = var.images[k].vm_ci_packages.content
+            write-files-enabled     = var.images[k].vm_ci_write_files.enabled
+            write-files-content     = var.images[k].vm_ci_write_files.content
+            reboot-enabled          = var.images[k].vm_ci_reboot_enabled
+        }) : null
+    }
+
+    cloud-init-data = {
+        for k, v in var.images : k => var.images[k].vm_cloud_init_data == null ? local.cloud-init-template-data[k] : var.images[k].vm_cloud_init_data
+    }
+}
 	
 resource "proxmox_virtual_environment_file" "cloud-init" {
     for_each = toset(distinct([for k, v in var.images : k]))
@@ -17,40 +38,11 @@ resource "proxmox_virtual_environment_file" "cloud-init" {
     datastore_id = "local"
 
     source_raw {
-        data = var.images[each.key].vm_cloud_init ? templatefile("${path.module}/resources/cloud-init/vm-init.yaml.tftpl", {
-            hostname      = each.key
-            username      = var.images[each.key].vm_user
-            pub-keys      = var.images[each.key].vm_ssh_public_key_files
-            run-cmds-enabled        = var.images[each.key].vm_ci_run_cmds.enabled
-            run-cmds-content        = var.images[each.key].vm_ci_run_cmds.content
-            packages-enabled        = var.images[each.key].vm_ci_packages.enabled
-            packages-content        = var.images[each.key].vm_ci_packages.content
-            write-files-enabled     = var.images[each.key].vm_ci_write_files.enabled
-            write-files-content     = var.images[each.key].vm_ci_write_files.content
-            reboot-enabled          = var.images[each.key].vm_ci_reboot_enabled
-        }) : null
+        data = local.cloud-init-data[each.key]
 
         file_name = "${each.key}-${var.images[each.key].vm_id}-cloudinit.yaml"
     }
 }
-
-# Testing template
-# resource "local_file" "test" {
-#     for_each = toset(distinct([for k, v in var.images : k]))
-#     filename = "${each.key}-${var.images[each.key].vm_id}-cloudinit.yaml"
-#     content = var.images[each.key].vm_cloud_init ? templatefile("${path.module}/resources/cloud-init/vm-init.yaml.tftpl", {
-#             hostname      = each.key
-#             username      = var.images[each.key].vm_user
-#             pub-keys      = var.images[each.key].vm_ssh_public_key_files
-#             run-cmds-enabled        = var.images[each.key].vm_ci_run_cmds.enabled
-#             run-cmds-content        = var.images[each.key].vm_ci_run_cmds.content
-#             packages-enabled        = var.images[each.key].vm_ci_packages.enabled
-#             packages-content        = var.images[each.key].vm_ci_packages.content
-#             write-files-enabled     = var.images[each.key].vm_ci_write_files.enabled
-#             write-files-content     = var.images[each.key].vm_ci_write_files.content
-#             reboot-enabled          = var.images[each.key].vm_ci_reboot_enabled
-#         }) : null
-# }
 
 resource "proxmox_virtual_environment_vm" "vm" {
     for_each = toset(distinct([for k, v in var.images : k]))
