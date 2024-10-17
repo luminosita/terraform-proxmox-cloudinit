@@ -7,14 +7,15 @@ resource "proxmox_virtual_environment_download_file" "os_generic_image" {
     url                = var.os.vm_base_url
     checksum           = var.os.vm_base_image_checksum
     checksum_algorithm = var.os.vm_base_image_checksum_alg
+    decompression_algorithm = var.os.vm_decompression_algorithm
 }
 
 locals {
     cloud-init-template-data = {
         for k, v in var.images : k => var.images[k].vm_cloud_init ? templatefile("${path.module}/resources/cloud-init/vm-init.yaml.tftpl", {
             hostname      = var.images[k].vm_name
-            username      = var.images[k].vm_user
-            pub-keys      = var.images[k].vm_ssh_public_key_files
+            username      = var.images[k].vm_ci_user
+            pub-keys      = var.images[k].vm_ci_ssh_public_key_files
             run-cmds-enabled        = var.images[k].vm_ci_run_cmds.enabled
             run-cmds-content        = var.images[k].vm_ci_run_cmds.content
             packages-enabled        = var.images[k].vm_ci_packages.enabled
@@ -31,7 +32,7 @@ locals {
 }
 	
 resource "proxmox_virtual_environment_file" "cloud-init" {
-    for_each = toset(distinct([for k, v in var.images : k]))
+    for_each = toset(distinct([for k, v in var.images: k if v.vm_cloud_init]))
     
     node_name    = var.images[each.key].vm_node_name
     content_type = "snippets"
@@ -113,7 +114,7 @@ resource "proxmox_virtual_environment_vm" "vm" {
         }
 
         datastore_id      = "local-zfs"
-        user_data_file_id = proxmox_virtual_environment_file.cloud-init[each.key].id
+        user_data_file_id = var.images[each.key].vm_cloud_init ? proxmox_virtual_environment_file.cloud-init[each.key].id : null
     }
 
 #     connection {
