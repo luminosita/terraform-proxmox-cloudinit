@@ -13,6 +13,7 @@ variable "images" {
     type        = map(object({
         vm_id               = number
 
+        vm_name        = string
         vm_node_name        = string
 
         vm_cloud_init       = bool
@@ -31,6 +32,11 @@ variable "images" {
             content = optional(list(object({
                 path = string
                 content = string
+                permissions = optional(string, "0644")
+                encoding = optional(string, "text/plain")
+                owner = optional(string, "root:root")
+                append = optional(bool, false)
+                defer = optional(bool, false)
             })))
         }), {
             enabled = true,

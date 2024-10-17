@@ -41,6 +41,11 @@ write_files:
 %{ else ~}
 %{ for item in write-files-content  ~}
   - path: ${item.path}
+    permissions: ${item.permissions}
+    encoding: ${item.encoding}
+    owner: ${item.owner}
+    append: ${item.append}
+    defer: ${item.defer}
     content: |
       ${ indent(6, item.content) }
 %{ endfor ~}
