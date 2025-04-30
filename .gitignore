@@ -1,0 +1,17 @@
+**/.terraform
+output
+
+*.tfstate
+*.tfstate.*
+**/*.tfplan
+
+**/.DS_Store
+
+*.tfvars.json
+*.lock.hcl
+
+output/
+
+**/tmp
+
+*/config/certificate
